@@ -37,18 +37,16 @@ func main() {
 	quit := false
 
 	//Event handler
-	var e sdl.Event
+	var e sdl.Event = nil
 
 	//While application is running
 	for !quit {
 		//Handle events on queue
-		e = sdl.PollEvent()
-		for e != nil {
+		for e = sdl.PollEvent(); e != nil; e = nil {
 			//User requests quit
 			if e.GetType() == sdl.QUIT {
 				quit = true
 			}
-			e = sdl.PollEvent()
 		}
 		//Apply the image
 		if err := gXOut.Blit(nil, gScreenSurface, nil); err != nil {
