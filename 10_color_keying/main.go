@@ -121,7 +121,7 @@ func loadMedia() error {
 	//Load background texture
 	err = gBackgroundTexture.LoadFromFile("background.png")
 	if err != nil {
-		return fmt.Errorf("failed to load background texture image: %v")
+		return fmt.Errorf("failed to load background texture image: %v", err)
 	}
 
 	return nil
@@ -130,10 +130,10 @@ func loadMedia() error {
 func close() error {
 	//Free loaded images
 	if err := gFooTexture.Free(); err != nil {
-		fmt.Errorf("could not free Foo' texture: %v")
+		return fmt.Errorf("could not free Foo' texture: %v", err)
 	}
 	if err := gBackgroundTexture.Free(); err != nil {
-		fmt.Errorf("could not free background texture: %v", err)
+		return fmt.Errorf("could not free background texture: %v", err)
 	}
 
 	//Destroy window
