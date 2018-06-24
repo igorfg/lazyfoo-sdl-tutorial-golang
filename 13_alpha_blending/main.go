@@ -63,7 +63,7 @@ func main() {
 						a += 32
 					}
 				} else if e.(*sdl.KeyboardEvent).Keysym.Sym == sdl.K_s { //Decrease alpha on s
-					//Cap if below -
+					//Cap if below 0
 					if a-32 > a {
 						a = 0
 					} else { //Decrement otherwise
