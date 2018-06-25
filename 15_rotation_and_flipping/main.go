@@ -8,8 +8,8 @@ import (
 	"github.com/veandco/go-sdl2/sdl"
 )
 
+//Screen dimension constants
 const (
-	//Screen dimension constants
 	screenWitdh  = 640
 	screenHeight = 480
 )
@@ -21,9 +21,8 @@ var (
 	//The window renderer
 	gRenderer *sdl.Renderer
 
-	//Scene textures
-	gFooTexture        LTexture
-	gBackgroundTexture LTexture
+	//Scene texture
+	gArrowTexture LTexture
 )
 
 func main() {
@@ -43,6 +42,12 @@ func main() {
 	//Event handler
 	var e sdl.Event
 
+	//Angle of rotation
+	var degrees float64 = 0
+
+	//Flip type
+	var flipType sdl.RendererFlip = sdl.FLIP_NONE
+
 	//While application is running
 	for !quit {
 		//Handle events on queue
@@ -50,18 +55,43 @@ func main() {
 			//User requests quit
 			if e.GetType() == sdl.QUIT {
 				quit = true
+			} else if e.GetType() == sdl.KEYDOWN {
+				switch e.(*sdl.KeyboardEvent).Keysym.Sym {
+				case sdl.K_a:
+					degrees -= 60
+					break
+				case sdl.K_d:
+					degrees += 60
+					break
+				case sdl.K_q:
+					flipType = sdl.FLIP_HORIZONTAL
+					break
+				case sdl.K_w:
+					flipType = sdl.FLIP_NONE
+					break
+				case sdl.K_e:
+					flipType = sdl.FLIP_VERTICAL
+					break
+				}
 			}
 		}
 
 		//Clear screen
-		gRenderer.SetDrawColor(255, 255, 255, 255)
-		gRenderer.Clear()
+		err := gRenderer.SetDrawColor(255, 255, 255, 255)
+		if err != nil {
+			log.Fatalf("could not set draw color for renderer: %v", err)
+		}
+		err = gRenderer.Clear()
+		if err != nil {
+			log.Fatalf("could not clear renderer: %v", err)
+		}
 
-		//Render background texture to screen
-		gBackgroundTexture.Render(0, 0)
-
-		//Render Foo' to the screen
-		gFooTexture.Render(240, 190)
+		//Render arrow
+		err = gArrowTexture.Render((screenWitdh-gArrowTexture.GetWidth())/2,
+			(screenHeight-gArrowTexture.GetHeight())/2, nil, degrees, nil, flipType)
+		if err != nil {
+			log.Fatalf("could not render arrow texture: %v", err)
+		}
 
 		//Update screen
 		gRenderer.Present()
@@ -94,8 +124,8 @@ func initSDl() error {
 		return fmt.Errorf("Window could not be created! SDL_Error: %v", err)
 	}
 
-	//Create renderer for window
-	if gRenderer, err = sdl.CreateRenderer(gWindow, -1, sdl.RENDERER_ACCELERATED); err != nil {
+	//Create vsynced renderer for window
+	if gRenderer, err = sdl.CreateRenderer(gWindow, -1, sdl.RENDERER_ACCELERATED|sdl.RENDERER_PRESENTVSYNC); err != nil {
 		return fmt.Errorf("Renderer could not be created! SDL Error: %v", err)
 	}
 
@@ -112,16 +142,10 @@ func initSDl() error {
 }
 
 func loadMedia() error {
-	//Load Foo' texture
-	err := gFooTexture.LoadFromFile("foo.png")
+	//Load sprite sheet texture
+	err := gArrowTexture.LoadFromFile("arrow.png")
 	if err != nil {
-		return fmt.Errorf("failed to load Foo' texture image: %v", err)
-	}
-
-	//Load background texture
-	err = gBackgroundTexture.LoadFromFile("background.png")
-	if err != nil {
-		return fmt.Errorf("failed to load background texture image: %v", err)
+		return fmt.Errorf("failed to load walking animation texture: %v", err)
 	}
 
 	return nil
@@ -129,11 +153,8 @@ func loadMedia() error {
 
 func close() error {
 	//Free loaded images
-	if err := gFooTexture.Free(); err != nil {
-		return fmt.Errorf("could not free Foo' texture: %v", err)
-	}
-	if err := gBackgroundTexture.Free(); err != nil {
-		return fmt.Errorf("could not free background texture: %v", err)
+	if err := gArrowTexture.Free(); err != nil {
+		return fmt.Errorf("could not free sprite sheet texture: %v", err)
 	}
 
 	//Destroy window

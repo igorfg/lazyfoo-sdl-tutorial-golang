@@ -8,10 +8,11 @@ import (
 	"github.com/veandco/go-sdl2/sdl"
 )
 
+//Screen dimension constants
 const (
-	//Screen dimension constants
-	screenWitdh  = 640
-	screenHeight = 480
+	screenWitdh            = 640
+	screenHeight           = 480
+	walkingAnimationFrames = 4
 )
 
 var (
@@ -21,9 +22,9 @@ var (
 	//The window renderer
 	gRenderer *sdl.Renderer
 
-	//Scene textures
-	gFooTexture        LTexture
-	gBackgroundTexture LTexture
+	//Walking animation
+	gSpriteClips        [walkingAnimationFrames]sdl.Rect
+	gSpriteSheetTexture LTexture
 )
 
 func main() {
@@ -43,6 +44,9 @@ func main() {
 	//Event handler
 	var e sdl.Event
 
+	//Current animtation frame
+	var frame int
+
 	//While application is running
 	for !quit {
 		//Handle events on queue
@@ -54,17 +58,33 @@ func main() {
 		}
 
 		//Clear screen
-		gRenderer.SetDrawColor(255, 255, 255, 255)
-		gRenderer.Clear()
+		err := gRenderer.SetDrawColor(255, 255, 255, 255)
+		if err != nil {
+			log.Fatalf("could not set draw color for renderer: %v", err)
+		}
+		err = gRenderer.Clear()
+		if err != nil {
+			log.Fatalf("could not clear renderer: %v", err)
+		}
 
-		//Render background texture to screen
-		gBackgroundTexture.Render(0, 0)
-
-		//Render Foo' to the screen
-		gFooTexture.Render(240, 190)
+		//Render current frame
+		currentClip := &gSpriteClips[frame/4]
+		err = gSpriteSheetTexture.Render((screenWitdh-currentClip.W)/2,
+			(screenHeight-currentClip.H)/2, currentClip)
+		if err != nil {
+			log.Fatalf("could not render sprite sheet texture: %v", err)
+		}
 
 		//Update screen
 		gRenderer.Present()
+
+		//Go to next frame
+		frame++
+
+		//Cycle animation
+		if frame/4 >= walkingAnimationFrames {
+			frame = 0
+		}
 	}
 
 	//Free resources and close SDL
@@ -94,8 +114,8 @@ func initSDl() error {
 		return fmt.Errorf("Window could not be created! SDL_Error: %v", err)
 	}
 
-	//Create renderer for window
-	if gRenderer, err = sdl.CreateRenderer(gWindow, -1, sdl.RENDERER_ACCELERATED); err != nil {
+	//Create vsynced renderer for window
+	if gRenderer, err = sdl.CreateRenderer(gWindow, -1, sdl.RENDERER_ACCELERATED|sdl.RENDERER_PRESENTVSYNC); err != nil {
 		return fmt.Errorf("Renderer could not be created! SDL Error: %v", err)
 	}
 
@@ -112,28 +132,40 @@ func initSDl() error {
 }
 
 func loadMedia() error {
-	//Load Foo' texture
-	err := gFooTexture.LoadFromFile("foo.png")
+	//Load sprite sheet texture
+	err := gSpriteSheetTexture.LoadFromFile("foo.png")
 	if err != nil {
-		return fmt.Errorf("failed to load Foo' texture image: %v", err)
+		return fmt.Errorf("failed to load walking animation texture: %v", err)
 	}
 
-	//Load background texture
-	err = gBackgroundTexture.LoadFromFile("background.png")
-	if err != nil {
-		return fmt.Errorf("failed to load background texture image: %v", err)
-	}
+	//Set sprite clips
+	gSpriteClips[0].X = 0
+	gSpriteClips[0].Y = 0
+	gSpriteClips[0].W = 64
+	gSpriteClips[0].H = 205
+
+	gSpriteClips[1].X = 64
+	gSpriteClips[1].Y = 0
+	gSpriteClips[1].W = 64
+	gSpriteClips[1].H = 205
+
+	gSpriteClips[2].X = 128
+	gSpriteClips[2].Y = 0
+	gSpriteClips[2].W = 64
+	gSpriteClips[2].H = 205
+
+	gSpriteClips[3].X = 196
+	gSpriteClips[3].Y = 0
+	gSpriteClips[3].W = 64
+	gSpriteClips[3].H = 205
 
 	return nil
 }
 
 func close() error {
 	//Free loaded images
-	if err := gFooTexture.Free(); err != nil {
-		return fmt.Errorf("could not free Foo' texture: %v", err)
-	}
-	if err := gBackgroundTexture.Free(); err != nil {
-		return fmt.Errorf("could not free background texture: %v", err)
+	if err := gSpriteSheetTexture.Free(); err != nil {
+		return fmt.Errorf("could not free sprite sheet texture: %v", err)
 	}
 
 	//Destroy window

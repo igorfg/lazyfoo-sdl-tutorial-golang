@@ -6,10 +6,11 @@ import (
 
 	"github.com/veandco/go-sdl2/img"
 	"github.com/veandco/go-sdl2/sdl"
+	"github.com/veandco/go-sdl2/ttf"
 )
 
+//Screen dimension constants
 const (
-	//Screen dimension constants
 	screenWitdh  = 640
 	screenHeight = 480
 )
@@ -21,9 +22,11 @@ var (
 	//The window renderer
 	gRenderer *sdl.Renderer
 
-	//Scene textures
-	gFooTexture        LTexture
-	gBackgroundTexture LTexture
+	//Globally used font
+	gFont *ttf.Font
+
+	//Rendered texture
+	gTextTexture LTexture
 )
 
 func main() {
@@ -43,6 +46,12 @@ func main() {
 	//Event handler
 	var e sdl.Event
 
+	//Angle of rotation
+	var degrees float64
+
+	//Flip type
+	var flipType = sdl.FLIP_NONE
+
 	//While application is running
 	for !quit {
 		//Handle events on queue
@@ -54,14 +63,18 @@ func main() {
 		}
 
 		//Clear screen
-		gRenderer.SetDrawColor(255, 255, 255, 255)
-		gRenderer.Clear()
+		err := gRenderer.SetDrawColor(255, 255, 255, 255)
+		if err != nil {
+			log.Fatalf("could not set draw color for renderer: %v", err)
+		}
+		err = gRenderer.Clear()
+		if err != nil {
+			log.Fatalf("could not clear renderer: %v", err)
+		}
 
-		//Render background texture to screen
-		gBackgroundTexture.Render(0, 0)
-
-		//Render Foo' to the screen
-		gFooTexture.Render(240, 190)
+		//Render current frame
+		err = gTextTexture.Render((screenWitdh-gTextTexture.GetWidth())/2,
+			(screenHeight-gTextTexture.GetHeight())/2, nil, degrees, nil, flipType)
 
 		//Update screen
 		gRenderer.Present()
@@ -94,8 +107,8 @@ func initSDl() error {
 		return fmt.Errorf("Window could not be created! SDL_Error: %v", err)
 	}
 
-	//Create renderer for window
-	if gRenderer, err = sdl.CreateRenderer(gWindow, -1, sdl.RENDERER_ACCELERATED); err != nil {
+	//Create vsynced renderer for window
+	if gRenderer, err = sdl.CreateRenderer(gWindow, -1, sdl.RENDERER_ACCELERATED|sdl.RENDERER_PRESENTVSYNC); err != nil {
 		return fmt.Errorf("Renderer could not be created! SDL Error: %v", err)
 	}
 
@@ -108,20 +121,29 @@ func initSDl() error {
 		return fmt.Errorf("SDL_image could not initialize! SDL_image Error: %v", img.GetError())
 	}
 
+	//Initialize SDL_ttf
+	if err := ttf.Init(); err != nil {
+		return fmt.Errorf("SDL_ttf coul not initialize! SDL_ttf Error: %v", err)
+	}
+
 	return nil
 }
 
 func loadMedia() error {
-	//Load Foo' texture
-	err := gFooTexture.LoadFromFile("foo.png")
+	//Local error declaration
+	var err error
+
+	//Open the font
+	gFont, err = ttf.OpenFont("lazy.ttf", 28)
 	if err != nil {
-		return fmt.Errorf("failed to load Foo' texture image: %v", err)
+		return fmt.Errorf("failed to load lazy font! SDL_ttf Error: %v", err)
 	}
 
-	//Load background texture
-	err = gBackgroundTexture.LoadFromFile("background.png")
+	//Render text
+	textColor := sdl.Color{R: 0, G: 0, B: 0, A: 0}
+	err = gTextTexture.loadFromRenderedText("The quick brown fox jumps over the lazy dog", textColor)
 	if err != nil {
-		return fmt.Errorf("failed to load background texture image: %v", err)
+		return fmt.Errorf("failed to render text texture: %v", err)
 	}
 
 	return nil
@@ -129,12 +151,13 @@ func loadMedia() error {
 
 func close() error {
 	//Free loaded images
-	if err := gFooTexture.Free(); err != nil {
-		return fmt.Errorf("could not free Foo' texture: %v", err)
+	if err := gTextTexture.Free(); err != nil {
+		return fmt.Errorf("could not free text texture: %v", err)
 	}
-	if err := gBackgroundTexture.Free(); err != nil {
-		return fmt.Errorf("could not free background texture: %v", err)
-	}
+
+	//Free global font
+	gFont.Close()
+	gFont = nil
 
 	//Destroy window
 	if err := gRenderer.Destroy(); err != nil {
@@ -147,8 +170,10 @@ func close() error {
 	gRenderer = nil
 
 	//Quit SDL Subsystems
+	ttf.Quit()
 	img.Quit()
 	sdl.Quit()
+
 	return nil
 }
 

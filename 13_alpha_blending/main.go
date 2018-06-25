@@ -22,7 +22,7 @@ var (
 	gRenderer *sdl.Renderer
 
 	//Scene textures
-	gFooTexture        LTexture
+	gModulatedTexture  LTexture
 	gBackgroundTexture LTexture
 )
 
@@ -43,6 +43,9 @@ func main() {
 	//Event handler
 	var e sdl.Event
 
+	//Modulation component
+	var a uint8 = 255
+
 	//While application is running
 	for !quit {
 		//Handle events on queue
@@ -50,18 +53,52 @@ func main() {
 			//User requests quit
 			if e.GetType() == sdl.QUIT {
 				quit = true
+			} else if e.GetType() == sdl.KEYDOWN { //Handle key presses
+				//Increase alpha on w
+				if e.(*sdl.KeyboardEvent).Keysym.Sym == sdl.K_w {
+					//Cap if over 255
+					if a+32 < a {
+						a = 255
+					} else { //Increment otherwise
+						a += 32
+					}
+				} else if e.(*sdl.KeyboardEvent).Keysym.Sym == sdl.K_s { //Decrease alpha on s
+					//Cap if below 0
+					if a-32 > a {
+						a = 0
+					} else { //Decrement otherwise
+						a -= 32
+					}
+				}
 			}
 		}
 
 		//Clear screen
-		gRenderer.SetDrawColor(255, 255, 255, 255)
-		gRenderer.Clear()
+		err := gRenderer.SetDrawColor(255, 255, 255, 255)
+		if err != nil {
+			log.Fatalf("could not set draw color for renderer: %v", err)
+		}
 
-		//Render background texture to screen
-		gBackgroundTexture.Render(0, 0)
+		err = gRenderer.Clear()
+		if err != nil {
+			log.Fatalf("could not clear renderer: %v", err)
+		}
 
-		//Render Foo' to the screen
-		gFooTexture.Render(240, 190)
+		//Render background
+		err = gBackgroundTexture.Render(0, 0, nil)
+		if err != nil {
+			log.Fatalf("could not render background texture: %v", err)
+		}
+
+		//Render front blended
+		err = gModulatedTexture.SetAlpha(a)
+		if err != nil {
+			log.Fatalf("could not set alpha from texture: %v", err)
+		}
+		err = gModulatedTexture.Render(0, 0, nil)
+		if err != nil {
+			log.Fatalf("could not render modulated texture: %v", err)
+		}
 
 		//Update screen
 		gRenderer.Present()
@@ -112,16 +149,19 @@ func initSDl() error {
 }
 
 func loadMedia() error {
-	//Load Foo' texture
-	err := gFooTexture.LoadFromFile("foo.png")
+	//Load front alpha texture
+	err := gModulatedTexture.LoadFromFile("fadeout.png")
 	if err != nil {
-		return fmt.Errorf("failed to load Foo' texture image: %v", err)
+		return fmt.Errorf("failed to load front texture: %v", err)
 	}
 
+	//Set standard alpha blending
+	gModulatedTexture.SetBlendMode(sdl.BLENDMODE_BLEND)
+
 	//Load background texture
-	err = gBackgroundTexture.LoadFromFile("background.png")
+	err = gBackgroundTexture.LoadFromFile("fadein.png")
 	if err != nil {
-		return fmt.Errorf("failed to load background texture image: %v", err)
+		return fmt.Errorf("failed to load background texture: %v", err)
 	}
 
 	return nil
@@ -129,11 +169,8 @@ func loadMedia() error {
 
 func close() error {
 	//Free loaded images
-	if err := gFooTexture.Free(); err != nil {
-		return fmt.Errorf("could not free Foo' texture: %v", err)
-	}
-	if err := gBackgroundTexture.Free(); err != nil {
-		return fmt.Errorf("could not free background texture: %v", err)
+	if err := gModulatedTexture.Free(); err != nil {
+		return fmt.Errorf("could not free modulated texture: %v", err)
 	}
 
 	//Destroy window

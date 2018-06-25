@@ -21,9 +21,9 @@ var (
 	//The window renderer
 	gRenderer *sdl.Renderer
 
-	//Scene textures
-	gFooTexture        LTexture
-	gBackgroundTexture LTexture
+	//Scene sprites
+	gSpriteClips        [4]sdl.Rect
+	gSpriteSheetTexture LTexture
 )
 
 func main() {
@@ -57,11 +57,18 @@ func main() {
 		gRenderer.SetDrawColor(255, 255, 255, 255)
 		gRenderer.Clear()
 
-		//Render background texture to screen
-		gBackgroundTexture.Render(0, 0)
+		//Render top left sprite
+		gSpriteSheetTexture.Render(0, 0, &gSpriteClips[0])
 
-		//Render Foo' to the screen
-		gFooTexture.Render(240, 190)
+		//Render top right sprite
+		gSpriteSheetTexture.Render(screenWitdh-gSpriteClips[1].W, 0, &gSpriteClips[1])
+
+		//Render bottom left sprite
+		gSpriteSheetTexture.Render(0, screenHeight-gSpriteClips[2].H, &gSpriteClips[2])
+
+		//Render bottom right sprite
+		gSpriteSheetTexture.Render(screenWitdh-gSpriteClips[3].W,
+			screenHeight-gSpriteClips[3].H, &gSpriteClips[3])
 
 		//Update screen
 		gRenderer.Present()
@@ -113,27 +120,42 @@ func initSDl() error {
 
 func loadMedia() error {
 	//Load Foo' texture
-	err := gFooTexture.LoadFromFile("foo.png")
+	err := gSpriteSheetTexture.LoadFromFile("dots.png")
 	if err != nil {
-		return fmt.Errorf("failed to load Foo' texture image: %v", err)
+		return fmt.Errorf("failed to load sprite sheet texture: %v", err)
 	}
 
-	//Load background texture
-	err = gBackgroundTexture.LoadFromFile("background.png")
-	if err != nil {
-		return fmt.Errorf("failed to load background texture image: %v", err)
-	}
+	//Set top left sprite
+	gSpriteClips[0].X = 0
+	gSpriteClips[0].Y = 0
+	gSpriteClips[0].W = 100
+	gSpriteClips[0].H = 100
+
+	//Set top right sprite
+	gSpriteClips[1].X = 100
+	gSpriteClips[1].Y = 0
+	gSpriteClips[1].W = 100
+	gSpriteClips[1].H = 100
+
+	//Set bottom left sprite
+	gSpriteClips[2].X = 0
+	gSpriteClips[2].Y = 100
+	gSpriteClips[2].W = 100
+	gSpriteClips[2].H = 100
+
+	//Set bottom right sprite
+	gSpriteClips[3].X = 100
+	gSpriteClips[3].Y = 100
+	gSpriteClips[3].W = 100
+	gSpriteClips[3].H = 100
 
 	return nil
 }
 
 func close() error {
 	//Free loaded images
-	if err := gFooTexture.Free(); err != nil {
-		return fmt.Errorf("could not free Foo' texture: %v", err)
-	}
-	if err := gBackgroundTexture.Free(); err != nil {
-		return fmt.Errorf("could not free background texture: %v", err)
+	if err := gSpriteSheetTexture.Free(); err != nil {
+		return fmt.Errorf("could not free sprite sheet texture: %v", err)
 	}
 
 	//Destroy window

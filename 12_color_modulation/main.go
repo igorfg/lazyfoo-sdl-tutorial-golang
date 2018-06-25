@@ -21,9 +21,8 @@ var (
 	//The window renderer
 	gRenderer *sdl.Renderer
 
-	//Scene textures
-	gFooTexture        LTexture
-	gBackgroundTexture LTexture
+	//Scene texture
+	gModulatedTexture LTexture
 )
 
 func main() {
@@ -43,6 +42,11 @@ func main() {
 	//Event handler
 	var e sdl.Event
 
+	//Modulation components
+	var r uint8 = 255
+	var g uint8 = 255
+	var b uint8 = 255
+
 	//While application is running
 	for !quit {
 		//Handle events on queue
@@ -50,18 +54,61 @@ func main() {
 			//User requests quit
 			if e.GetType() == sdl.QUIT {
 				quit = true
+			} else if e.GetType() == sdl.KEYDOWN { //On keypress change rgb values
+				switch e.(*sdl.KeyboardEvent).Keysym.Sym {
+				//Increase red
+				case sdl.K_q:
+					r += 32
+					break
+
+				//Increase green
+				case sdl.K_w:
+					g += 32
+					break
+
+				//Increase blue
+				case sdl.K_e:
+					b += 32
+					break
+
+				//Decrease red
+				case sdl.K_a:
+					r -= 32
+					break
+
+				//Decrease green
+				case sdl.K_s:
+					g -= 32
+					break
+
+				//Decrease blue
+				case sdl.K_d:
+					b -= 32
+					break
+				}
 			}
 		}
 
 		//Clear screen
-		gRenderer.SetDrawColor(255, 255, 255, 255)
-		gRenderer.Clear()
+		err := gRenderer.SetDrawColor(255, 255, 255, 255)
+		if err != nil {
+			log.Fatalf("could not set draw color for renderer: %v", err)
+		}
 
-		//Render background texture to screen
-		gBackgroundTexture.Render(0, 0)
+		err = gRenderer.Clear()
+		if err != nil {
+			log.Fatalf("could not clear renderer: %v", err)
+		}
 
-		//Render Foo' to the screen
-		gFooTexture.Render(240, 190)
+		//Modulate and render texture
+		err = gModulatedTexture.SetColor(r, g, b)
+		if err != nil {
+			log.Fatalf("could not set color from texture: %v", err)
+		}
+		err = gModulatedTexture.Render(0, 0, nil)
+		if err != nil {
+			log.Fatalf("could not render modulated texture: %v", err)
+		}
 
 		//Update screen
 		gRenderer.Present()
@@ -113,15 +160,9 @@ func initSDl() error {
 
 func loadMedia() error {
 	//Load Foo' texture
-	err := gFooTexture.LoadFromFile("foo.png")
+	err := gModulatedTexture.LoadFromFile("colors.png")
 	if err != nil {
-		return fmt.Errorf("failed to load Foo' texture image: %v", err)
-	}
-
-	//Load background texture
-	err = gBackgroundTexture.LoadFromFile("background.png")
-	if err != nil {
-		return fmt.Errorf("failed to load background texture image: %v", err)
+		return fmt.Errorf("failed to load sprite sheet texture: %v", err)
 	}
 
 	return nil
@@ -129,11 +170,8 @@ func loadMedia() error {
 
 func close() error {
 	//Free loaded images
-	if err := gFooTexture.Free(); err != nil {
-		return fmt.Errorf("could not free Foo' texture: %v", err)
-	}
-	if err := gBackgroundTexture.Free(); err != nil {
-		return fmt.Errorf("could not free background texture: %v", err)
+	if err := gModulatedTexture.Free(); err != nil {
+		return fmt.Errorf("could not free modulated texture: %v", err)
 	}
 
 	//Destroy window
