@@ -9,3 +9,6 @@
 
 # Ignore C++ files
 C++/
+
+#Ignore .vscode
+.vscode
