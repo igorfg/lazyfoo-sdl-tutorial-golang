@@ -13,7 +13,7 @@ const (
 	DotHeight = 20
 
 	//DotVel is the maximum axis velocity of the dot
-	DotVel = 20
+	DotVel = 10
 )
 
 //Dot is the dot that will move around on the screen
