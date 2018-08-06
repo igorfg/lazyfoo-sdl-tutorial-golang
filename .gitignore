@@ -10,5 +10,8 @@
 # Ignore C++ files
 C++/
 
-#Ignore .vscode
+# Ignore .vscode
 .vscode
+
+# Ignore nums.bin
+nums.bin
